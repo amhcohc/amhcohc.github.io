@@ -1,6 +1,7 @@
 ---
 title: Synchronous Asynchronous Blocking NonBlocking
 layout: post
+categories: common
 ---
 
 Synchronous, Asynchronous, Blocking, NonBlocking
