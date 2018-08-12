@@ -28,11 +28,35 @@ Synchronous, Asynchronous, Blocking, NonBlocking 의 차이점을 설명해보�
 
 아래의 코드를 보자. 아주 간략화 하였지만 주문 정보를 만든다고 하자. 해당 주문을 만드는데 배송 정보는 API로 가져와야 한다고 가정하자. (점점 MSA를 차용하는 곳이 많아지면서 이런 케이스들을 많이 보게 된다.)
 
-![asyncsyncblockingnonblocking](/assets/img/syncasyncblockingnonblocking/synchronous_blocking.png)
+```
+public void synchronousBlocking() {
+    RestTemplate restTemplate = new RestTemplate();
+    ResponseEntity<Delivery> delivery = restTemplate.getForEntity("http://localhost/delivery", Delivery.class);
+
+    Order order = new Order();
+    order.setOrder(makeOrder());
+    order.setDelivery(delivery.getBody().getAddress());
+
+    // 후 처리
+}
+```
 
 위 코드의 경우 해당 코드는 모두 순선대로 진행되어야 한다.  그럼 아래 코드를 보자
 
-![synchronous_nonblocking](/assets/img/syncasyncblockingnonblocking/synchronous_nonblocking.png)
+```
+public void synchronousNonBlocking() throws ExecutionException, InterruptedException {
+    Future<ResponseEntity<Delivery>> deliveryFuture = getDeliveryAsync();
+
+    Order order = new Order();
+    order.setOrder(makeOrder());
+
+    if (deliveryFuture.isDone()) {
+        order.setDelivery(deliveryFuture.get().getBody().getAddress());
+    }
+
+    // 후 처리
+}
+```
 
 차이점이 보이는가 **Syncrhonous_Blocking** 과 **Synchronous_NonBlocking** 의 차이를 보여준다. 
 
@@ -47,7 +71,25 @@ delivery정보를 가져오는 API가 API Latency가 5초, makeOrder의 처리�
 
 비동기라고 생각하지 말고 Syncrhonous / Asynchronous 단어 자체로 개념을 이해하는게 좋을것 같다는 생각이 들었다. Apple이 사과가 아니라 우리가 먹는 과일중의 하나의 이미지로 받아들이듯이..(웅??)
 
-![asynchronous_nonblocking](/assets/img/syncasyncblockingnonblocking/asynchronous_nonblocking.png)
+```
+public void asynchronousNonBlocking() throws ExecutionException, InterruptedException {
+    AsyncRestTemplate asyncRestTemplate = new AsyncRestTemplate();
+    ListenableFuture<ResponseEntity<Delivery>> deliveryFuture = asyncRestTemplate.exchange("http://localhost/delivery",
+            HttpMethod.GET, new HttpEntity<String>("params", new HttpHeaders()), Delivery.class);
+    deliveryFuture.addCallback(result -> {
+        asyncRestTemplate.exchange("http://localhost/customer", HttpMethod.POST, new HttpEntity<String>("params", new HttpHeaders()), Delivery.class);
+    }, ex -> System.out.println(ex.getStackTrace()));
+
+    Order order = new Order();
+    order.setOrder(makeOrder());
+
+    if (deliveryFuture.isDone()) {
+        order.setDelivery(deliveryFuture.get().getBody().getAddress());
+    }
+
+    // 후 처리
+}
+```
 
 AysncRestTemplate를 이용해서 Async를 구현했다. 우리는 여전히 배송 정보를 가져와서 주문정보를 가져왔다. 그런데 Spec이 변경되었다. 배송정보를 가져와서 해당 정보를 이용해서 고객의 배송 정보를 변경하고 싶다. 그래서 해당 정보를 가져온 후에 Asynchronous하게 고객정보 업데이트를 요청했다. 
 
