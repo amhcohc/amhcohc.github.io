@@ -41,7 +41,7 @@ public void synchronousBlocking() {
 }
 ```
 
-위 코드의 경우 해당 코드는 모두 순선대로 진행되어야 한다.  그럼 아래 코드를 보자
+위 코드의 경우 해당 코드는 모두 순서대로 진행되어야 한다.  그럼 아래 코드를 보자
 
 ```
 public void synchronousNonBlocking() throws ExecutionException, InterruptedException {
@@ -67,7 +67,7 @@ delivery정보를 가져오는 API가 API Latency가 5초, makeOrder의 처리�
 
 **나는 방금 위에서 Concurrency를 보았다.**
 
-자 그럼 이제 Aysnchronous를 생각해보자. Synchronous라는 개념을 고려하지 않을때 Blocking, NonBlocking만 보았을 때 아 Blocking이 되지 않고 작업이 된다라고 이해가 된다. Asynchronous를 우리는 비동기 처리라고 한다. 비동기란 말을 풀어보면 동기가 아닌거다. 동기가 아닌건 무슨 뜻일까. 사실 동기라는 뜻을 찾아보면 교류 장치에 있어서의 주파수의 일치 (https://hanja.dict.naver.com/search?query=%EB%8F%99%EA%B8%B0) 라고 나온다...
+자 그럼 이제 Aysnchronous를 생각해보자. Synchronous라는 개념을 고려하지 않을때 Blocking, NonBlocking만 보았을 때 아 Blocking이 되지 않고 작업이 된다라고 이해가 된다. Asynchronous를 우리는 비동기 처리라고 한다. 비동기란 말을 풀어보면 동기가 아닌거다. 동기가 아닌건 무슨 뜻일까. 사실 동기라는 뜻을 찾아보면 교류 장치에 있어서의 주파수의 일치 ([네이버 한자](https://hanja.dict.naver.com/search?query=%EB%8F%99%EA%B8%B0)) 라고 나온다...
 
 비동기라고 생각하지 말고 Syncrhonous / Asynchronous 단어 자체로 개념을 이해하는게 좋을것 같다는 생각이 들었다. Apple이 사과가 아니라 우리가 먹는 과일중의 하나의 이미지로 받아들이듯이..(웅??)
 
