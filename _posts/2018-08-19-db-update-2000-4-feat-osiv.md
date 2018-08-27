@@ -53,6 +53,38 @@ public List<Long> process() {
 
 EntityManager는 request가 들어올때 생성되고 request가 종료될때 같이 종료된다. (즉 메모리에서 사라진다.). 필자의 구현은 for문안에 Transaction method를 2천번 실행하는 동안 해당 Transaction은 종료가 되었지만 해당 Transaction에서 사용된 (정확히는 주문 정보를 변경하기 위해 orderRepository.findOne(id); 에서 사용한 Orders Entity) Entity들이 PersistenceContext에는 Request가 끝날때까지는 살아남는다라는 OSIV의 정책을 지키고자 마구 마구 EntityManager에 해당 Entity가 저장된 것이다. 이로 인해 메모리 이슈가 발생하게 됨으로 인해 고작 2천건을 처리하는데 저렇게 많은 시간이 걸리게 되었다.
 
+정말로 이렇게 되는지 검증해보자. 
+```
+public List<Long> process() {
+    List<Long> failedOrderList = new ArrayList<>();
+    Stream.iterate(1L, a -> a + 2).limit(600).collect(Collectors.toList())
+    .forEach(a -> {
+        try {
+            orderService.updateOrder(a, String.valueOf(a));
+            org.hibernate.engine.spi.SessionImplementor session = entityManager.unwrap( org.hibernate.engine.spi.SessionImplementor.class );
+						org.hibernate.engine.spi.PersistenceContext  pc = session.getPersistenceContext();
+						Map.Entry<Object,org.hibernate.engine.spi.EntityEntry>[] entityEntries = pc.reentrantSafeEntityEntries();
+						log.info("EntityEntries Length : " + entityEntries.length);
+        } catch (Exception e) {
+            failedOrderList.add(a);
+        }
+    });
+
+    return failedOrderList;
+}
+```
+
+위와 같이 테스트를 진행해보면 
+```
+ EntityEntries Length : 1
+ EntityEntries Length : 2
+ EntityEntries Length : 3
+ EntityEntries Length : 4
+ EntityEntries Length : 5
+ EntityEntries Length : 6
+```
+으로 증가하는 것을 알 수 있다. 
+
 OSIV 세팅을 spring.jpa.open-in-view=false로 하여 해당 문제를 해결할 수 있었으나 이미 프로젝트는 거대해졌고 해당 OSIV 설정을 false로 하게 되면 어떤 다른곳에 side-effect가 발생할지 예측할 수 없어서 아래와 같이 해결하였다.
 
 ```
@@ -72,4 +104,12 @@ public List<Long> process() {
 }
 ```
 
-메모리가 정말로 느는지에 대해서는 해당 부분을 검증해 볼 수 있는 Code 및 시연결과를 빠른 시일내에 업데이트 하도록 하겠다.
+
+혹시나 여기서 spring.jap.open-in-view=false 인 경우 어떻게 될지 궁금할 수 있을것 같은데 false로 설정 후 EntryEntites Length를 기록하는 코드를 실행해보면 아래와 같은 결과를 볼 수 있다.
+```
+java.lang.IllegalStateException: No transactional EntityManager available
+```
+
+이 블로그를 쓰게 된 계기가 The Devil is in the detail. 이다. 무언가를 진행할 때 잘알고 쓰지 않으면 Default값으로 인해 추후에는 돌이킬 수 없는 상황이 올 수 있고, 그 상황에서 해결책을 찾아야 할때는 자기 스스로 이해가 될 때까지 실제 코드에서 해보는게 좋은 것 같다. 
+
+(물론 필자는 여전히 false를 적용하지 못하고 entityManager.clear();를 쓰고 있다. false로 변경시 전체 프로젝트에 어떤 영향을 끼칠지를 사실 예상 불가능하기 때문이다. 첫 단추를 잘못 꿴 것이다..)
